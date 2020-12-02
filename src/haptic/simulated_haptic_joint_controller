@@ -1,0 +1,69 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import rospy, time, math
+from std_msgs.msg import Header, Bool
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import Omni, UR5
+
+haptic_status = False
+
+def callback(data):
+    global haptic_status
+    print(data)
+    print(data.data)
+    haptic_status = data.data
+
+def main():
+    global haptic_status
+    
+    # Node definition
+    rospy.init_node('simulated_haptic_joint_controller', anonymous=True)
+
+    # Instantiate objects
+    omni = Omni('/Touch3D/joint_states', '/Touch3D/pose')
+    robot = UR5('/arm_controller/state')
+    traj = JointTrajectory()
+    points = JointTrajectoryPoint()
+
+    # Trajectory publisher
+    pub = rospy.Publisher('/arm_controller/command', JointTrajectory, queue_size=1)
+    sub = rospy.Subscriber('/haptic_controller/status', Bool, callback)
+
+    # Wait for callback and set ROS rate
+    rospy.sleep(0.08)
+    rate = rospy.Rate(125)
+    
+    while not rospy.is_shutdown():
+        if (haptic_status == True):
+            # Message header
+            traj.header = Header()
+            traj.header.stamp = rospy.Time.now()
+
+            # Joint configuration
+            joint = omni.get_state()
+            q = [joint[0], -joint[1], -joint[2] + 1.45, joint[4] + math.pi/4, joint[3] + math.pi/2, joint[5]]
+            
+            # Store omni configuration as desired points
+            points.positions = q
+            points.time_from_start = rospy.Duration(0.1)
+
+            # Trajectory points
+            traj.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint',
+                                'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+            traj.points = []
+            traj.points.append(points)
+
+            # Optional: State logger
+            #rospy.loginfo(robot.get_pos())
+            #rospy.loginfo(traj)
+
+            # Publish the message
+            pub.publish(traj)
+        
+        rate.sleep()
+
+if __name__ == '__main__':
+    main()

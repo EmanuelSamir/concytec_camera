@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+import rospy, math
+from omni_msgs.msg import OmniFeedback
+from geometry_msgs.msg import WrenchStamped
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import Omni, FTSensor
+
+def main():
+    # Node definition
+    rospy.init_node("sensor_force_controller", anonymous=True)
+
+    # Instantiate objects
+    fts = FTSensor('/wrench') # Unfilter: \wrench, Filtered: \filtered_wrench
+    om = Omni()
+    of = OmniFeedback()
+    of.lock = [False for i in xrange(3)]
+
+    # Force feedback publisher
+    pub = rospy.Publisher("Touch3D/force_feedback", OmniFeedback, queue_size=1)
+
+    # Wait for callback and set ROS rate
+    rospy.sleep(0.08)
+    rate = rospy.Rate(125)
+    
+    while not rospy.is_shutdown():
+        # Filtered force-torque sensor
+        ws = fts.getWrench()
+        pose = om.get_pose()
+        
+        #of.position.x = pose[0]
+        #of.position.y = pose[1]
+        #of.position.z = pose[2]
+        
+        if (ws.wrench.force.x/100 <= 3.0):
+            of.force.x = ws.wrench.force.x/50
+        else:
+            of.force.x = 3.0
+
+        if (ws.wrench.force.y/100 <= 3.0):
+            of.force.y = ws.wrench.force.y/50
+        else:
+            of.force.y = 3.0
+
+        if (ws.wrench.force.z/100 <= 3.0):
+            of.force.z = ws.wrench.force.z/50
+        else:
+            of.force.z = 3.0
+        
+        of.lock = [False,False,False]
+
+        # Optional: State logger
+        rospy.loginfo('Force x:{:.2f}, Force y:{:.2f}, Force z:{:.2f}'.format(of.force.x, of.force.y, of.force.z))
+
+        # Publish the message
+        pub.publish(of)
+        rate.sleep()
+        
+if __name__ == '__main__':
+    main()

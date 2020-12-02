@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+import rospy, time, math, tf
+from omni_msgs.msg import OmniFeedback
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Header, Float32MultiArray
+from trajectory_msgs.msg import JointTrajectoryPoint
+from control_msgs.msg import JointTrajectoryControllerState
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import Omni, UR5
+
+def main():
+    # Node definition
+    rospy.init_node("joint_force_controller", anonymous=True)
+
+    # Instantiate objects
+    omni = Omni()
+    robot = UR5()
+    of = OmniFeedback()
+    of.lock = [False for i in xrange(3)]
+
+    # Trajectory publisher
+    pub = rospy.Publisher("Touch3D/force_feedback", OmniFeedback, queue_size=1)
+
+    # Wait for callback and set ROS rate
+    rospy.sleep(0.08)
+    rate = rospy.Rate(125)
+    
+    while not rospy.is_shutdown():
+        # Joint configuration
+        omni_js = omni.get_state()
+        robot_js = robot.get_pos() # js[0], -js[1], js[2] - 1.31
+        #waist = joint[0]
+        #lift = -joint[1]
+        #elbow = -(joint[2] - 1.31)
+        
+        #pan = js.actual.positions[0]
+        of.force.x = (omni_js[0] - robot_js[0])*3   # Before: 3, 4, 4
+        of.force.y = (omni_js[1] - robot_js[1])*4
+        of.force.z = (omni_js[2] - robot_js[2])*4
+        #self.of.force.y =0 
+        #self.of.force.z =0#0.04 * self.lock - x) - 0.001 * js.velocity[0];
+        #self.of.position.x = js.position[0]
+        #self.of.position.y = js.position[1]
+        #self.of.position.z = js.position[2]
+        of.lock = [False,False,False]
+
+        # Optional: State logger
+        rospy.loginfo('Force x:{:.2f}, Force xo:{:.2f}, Force xu:{:.2f}'.format(of.force.x,omni_js[0],robot_js[0]))
+        rospy.loginfo('Force y:{:.2f}, Force yo:{:.2f}, Force yu:{:.2f}'.format(of.force.y,omni_js[1],robot_js[1]))
+        rospy.loginfo('Force z:{:.2f}, Force zo:{:.2f}, Force zu:{:.2f}'.format(of.force.z,omni_js[2],robot_js[2]))
+
+        # Publish the message
+        pub.publish(of)
+        rate.sleep()
+    
+#     def start(self):
+#         while not rospy.is_shutdown():
+#             x = self.getPose("tip", "base").pose.position.x
+#             print self.of.force.x
+#             self.pub.publish(self.of)
+#             rospy.sleep(0.1)
+
+#     def getPose(self,target,source,timeout=1):
+#         now = rospy.Time.now()
+#         end = rospy.Time.now()+rospy.Duration(timeout)
+#         while not rospy.is_shutdown() and now < end:
+#             now = rospy.Time.now()
+#             try:
+#                 (trans,rot) = self.listener.lookupTransform(source,target, rospy.Time(0))
+#                 return PS(source,trans,rot)
+#             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+#                 rospy.sleep(0.01)
+#                 continue
+#         raise Exception,"Transform %s -> %s never appeared"%(target,source)
+#         return None
+        
+if __name__ == '__main__':
+    main()

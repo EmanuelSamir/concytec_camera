@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="paused" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="rviz" default="false"/>
+  <arg name="lab" default="true"/>
+  <arg name="FTSensor" default="false"/>
+  <arg name="haptic" default="false"/>
+  <arg name="control" default="false"/>
+  
+  <!-- Begin simulated world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" default="$(find haptic_control)/worlds/laboratory_with_tags.world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gui)"/>
+  </include>
+
+  <!-- Send robot urdf to parameter server -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find haptic_control)/urdf/haptic_ur5.urdf.xacro' transmission:=true"/>
+  
+  <!-- Spawn robot model in Gazebo -->
+  <node name="spawn_gazebo_model" pkg="gazebo_ros" type="spawn_model" 
+         args="-urdf -param robot_description -model haptic_ur5 -x 0.85 -Y 3.141593
+            -J elbow_joint 1.65
+            -J shoulder_lift_joint -1.22
+            -J shoulder_pan_joint -0.756"
+         output="screen"/>
+
+  <!-- Laboratory visualization -->
+  <group if="$(arg lab)">
+    <!-- Send laboratory urdf to param server -->
+    <param name="lab_description" command="$(find xacro)/xacro '$(find haptic_control)/urdf/laboratory.urdf.xacro'"/>
+
+    <!-- Push robot_description to factory and spawn robot in gazebo -->
+    <node name="spawn_lab_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param lab_description -model lab" output="screen"/>
+  </group>
+
+  <!-- Fake Calibration -->
+  <node pkg="rostopic" type="rostopic" name="fake_joint_calibration" args="pub /calibrated std_msgs/Bool true"/>
+  
+  <!-- Controllers config -->
+  <rosparam file="$(find haptic_control)/config/haptic_controller.yaml" command="load"/>
+  
+  <!-- Load controllers -->
+  <node name="robot_controller" pkg="controller_manager" type="spawner" output="screen" args="joint_state_controller arm_controller"/>
+
+  <!-- Robot state publisher -->
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+    <param name="robot_description" value="robot_description"/>
+    <param name="publish_frequency" type="double" value="50.0"/>
+    <param name="tf_prefix" type="string" value=""/>
+  </node>
+
+  <!-- RViz visualization -->
+  <group if="$(arg rviz)">
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find haptic_control)/config/haptic_ur5.rviz" required="true" />
+  </group>
+
+  <!-- Force-torque sensor filter -->
+  <group if="$(arg FTSensor)">
+    <node pkg="haptic_control" type="sensor_filter" name="sensor_filter"/>
+  </group>
+
+  <group if="$(arg haptic)">
+    <include file="$(find haptic_control)/launch/haptic.launch"/>
+  </group>
+
+  <group if="$(arg control)">
+    <node pkg="haptic_control" type="haptic_position" name="haptic_position"/>
+  </group>
+</launch>

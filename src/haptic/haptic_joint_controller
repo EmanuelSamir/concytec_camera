@@ -1,0 +1,76 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+from __future__ import print_function
+import rospy, time, math
+import roslib; roslib.load_manifest('ur_driver')
+import actionlib
+from control_msgs.msg import *
+from trajectory_msgs.msg import *
+from std_msgs.msg import Header, Bool
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import Omni, UR5
+
+haptic_status = False
+
+def callback(data):
+    global haptic_status
+    print(data)
+    print(data.data)
+    haptic_status = data.data
+
+def main():
+    global haptic_status
+    
+    # Node definition
+    rospy.init_node('haptic_joint_controller', anonymous=True, disable_signals=True)
+
+    # Instantiate objects
+    omni = Omni()
+    #robot = UR5('/arm_controller/state')
+
+    # Trajectory publisher
+    sub = rospy.Subscriber('/haptic_controller/status', Bool, callback)
+
+    client = actionlib.SimpleActionClient('/scaled_pos_joint_traj_controller/follow_joint_trajectory', FollowJointTrajectoryAction)
+    print("Waiting for server...")
+    client.wait_for_server()
+    print("Connected to server")
+
+    # Wait for callback and set ROS rate
+    rospy.sleep(1)
+    rate = rospy.Rate(10)
+    
+    while not rospy.is_shutdown():
+        if (haptic_status == True):
+            g = FollowJointTrajectoryGoal()
+            g.trajectory = JointTrajectory()
+            g.trajectory.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+
+            # Joint configuration
+            joint = omni.get_state()
+            #q = [-1.55, -2, -0.9, -1.87, 1.6, -0.08]
+            q = [-joint[0] - math.pi/2, joint[1] - 2.539, joint[2] - 1.19078, joint[4] + 1.846, -joint[3] + 4.4703, joint[5] - math.pi]
+            print(q)
+            
+            # Store omni configuration as desired points
+            points = JointTrajectoryPoint()
+            points.positions = q
+            points.velocities = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            points.time_from_start = rospy.Duration(0.75)
+
+            g.trajectory.points = []
+            g.trajectory.points.append(points)
+
+            client.send_goal(g)
+            try:
+                client.wait_for_result()
+            except KeyboardInterrupt:
+                client.cancel_goal()
+                raise
+        
+        rate.sleep()
+
+if __name__ == '__main__':
+    main()

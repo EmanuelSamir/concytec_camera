@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import numpy as np
+import rospy, tf, math
+from geometry_msgs.msg import WrenchStamped
+from tf.transformations import quaternion_matrix
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import FTSensor
+
+def main():
+  # Node definition
+  rospy.init_node("filtering_node", anonymous=True)
+
+  # Instantiate objects
+  fts = FTSensor("/wrench")
+  listener = tf.TransformListener()
+
+  # Trajectory publisher
+  pub = rospy.Publisher("filtered_wrench", WrenchStamped, queue_size=1)
+
+  # Past wrench measurements
+  past_wrench = [None, None, None, None, None]
+  new_wrench = [None, None, None]
+
+  # Wait for callback and set ROS rate
+  rospy.sleep(0.2)
+  rate = rospy.Rate(50)
+
+  while not rospy.is_shutdown():
+    try:
+      # Get pose of the force-torque sensor
+      (trans,rot) = listener.lookupTransform("wrist_3_link", "world", rospy.Time())
+      T = quaternion_matrix(rot)
+
+      # Compute gravity vector
+      g_world = np.array([0, 0, -9.80665]) # Gravity vector with respect to the world
+      g_sensor = T[0:3,0:3].dot(g_world)   # Gravity vector with respect to the sensor
+      ee_mass = 0.1879                     # Mass of the end-effector
+      FTS_force = g_sensor*ee_mass         # Resulting force
+
+      # Get force measurement
+      ws = fts.getWrench()
+      
+      # Gravity compensation
+      if None in past_wrench:
+        # Store previous measurements
+        ws.wrench.force.x = ws.wrench.force.x - FTS_force[0]
+        ws.wrench.force.y = ws.wrench.force.y - FTS_force[1]
+        ws.wrench.force.z = ws.wrench.force.z - FTS_force[2]
+
+        if (past_wrench[0] == None):
+          past_wrench[0] = ws.wrench.force
+        elif (past_wrench[1] == None):
+          past_wrench[1] = ws.wrench.force
+        elif (past_wrench[2] == None):
+          past_wrench[2] = ws.wrench.force
+        elif (past_wrench[3] == None):
+          past_wrench[3] = ws.wrench.force
+        elif (past_wrench[4] == None):
+          past_wrench[4] = ws.wrench.force
+
+      else:
+        current_wrench = [ws.wrench.force.x - FTS_force[0], 
+                          ws.wrench.force.y - FTS_force[1],
+                          ws.wrench.force.z - FTS_force[2]]
+
+        # Moving mean filter
+        new_wrench[0] = (past_wrench[0].x)/6 + (past_wrench[1].x)/6 + (past_wrench[2].x)/6 + \
+                        (past_wrench[3].x)/6 + (past_wrench[4].x)/6 + (current_wrench[0])/6
+        new_wrench[1] = (past_wrench[0].y)/6 + (past_wrench[1].y)/6 + (past_wrench[2].y)/6 + \
+                        (past_wrench[3].y)/6 + (past_wrench[4].y)/6 + (current_wrench[1])/6
+        new_wrench[2] = (past_wrench[0].z)/6 + (past_wrench[1].z)/6 + (past_wrench[2].z)/6 + \
+                        (past_wrench[3].z)/6 + (past_wrench[4].z)/6 + (current_wrench[2])/6
+
+        # Filtered measurements
+        ws.wrench.force.x = new_wrench[0]
+        ws.wrench.force.y = new_wrench[1]
+        ws.wrench.force.z = new_wrench[2]
+
+        # Store only the last 5 measurements
+        for i in range(len(past_wrench)-1):
+          past_wrench[i] = past_wrench[i+1]
+        past_wrench[4] = ws.wrench.force
+      
+      # Optional: State logger
+      rospy.loginfo('Force x:{:.3f}, Force y:{:.3f}, Force z:{:.3f}'.format(
+                    ws.wrench.force.x, ws.wrench.force.y, ws.wrench.force.z))
+
+      # Publish the message
+      pub.publish(ws)
+
+    except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+      continue
+
+    rate.sleep()
+
+
+if __name__ == '__main__':
+    main()
