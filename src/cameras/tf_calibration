@@ -240,6 +240,14 @@ def main():
 	rospy.loginfo('tf ready for broadcasting ...')
 
 	# Broadcasting tf 
+	if True:
+		rot_pitch = np.array( 		[[  0.0000000,  0.0000000, -1.0000000, 0.],
+						 [  0.0000000,  1.0000000,  0.0000000, 0.],
+						 [  1.0000000,  0.0000000,  0.0000000, 0.],
+					 	 [  0.0000000,  0.0000000,  0.0000000, 1.]])
+		T_0_1 = T_0_1.dot(rot_pitch)
+		T_0_2 = T_0_2.dot(rot_pitch)
+
 	tf_0_1 = mat2pose(T_0_1)
 	tf_0_2 = mat2pose(T_0_2)
 
