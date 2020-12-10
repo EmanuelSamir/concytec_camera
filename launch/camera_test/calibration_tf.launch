@@ -1,8 +1,13 @@
 <launch>
 	<!-- Configure args 	-->
 	<!-- Args to enable nodes	-->
+<<<<<<< HEAD
 	<arg name="flipper" default="true"/>
   	<arg name="tf_calibration" default="true"/>
+=======
+	<arg name="flipper" default="false"/>
+  	<arg name="tf_calibration" default="false"/>
+>>>>>>> refs/remotes/origin/main
 
 	<!-- Args for using data from a previous calibration	-->
 	<arg name="use_saved_data" default="false" />
@@ -23,6 +28,10 @@
 
 	
 	<!-- Nodes 	-->
+<<<<<<< HEAD
+=======
+
+>>>>>>> refs/remotes/origin/main
 	<include file="$(find haptic_control)/launch/camera_test/camera_apriltag.launch">
 		<arg name="camera_name" value="camera_01"/>
 		<arg name="image_suffix" value="$(arg image_suffix)" /> 
@@ -35,8 +44,14 @@
 		<arg name="camera_info_suffix" value="$(arg camera_info_suffix)" /> 
 	</include>
 
-	<!-- Here you can add an additional camera -->
+	<!-- Here you can add an additional camera -->	
 
+	<!-- Broadcast. Only for simulation-->
+	<!-- <node pkg="tf"
+        type="static_transform_publisher"
+        name="linkage"
+        args="0.177 0.1798 0.83 0 0 0  world world1 100" />
+		 -->
 	<!-- Flips camera topics -->
 	<group if="$(arg flipper)">
 		<node name="flipper" pkg="haptic_control" type="flipper">
