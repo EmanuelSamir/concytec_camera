@@ -1,8 +1,8 @@
 <launch>
 	<!-- Configure args 	-->
 	<!-- Args to enable nodes	-->
-	<arg name="flipper" default="true"/>
-  	<arg name="tf_calibration" default="true"/>
+	<arg name="flipper" default="false"/>
+  	<arg name="tf_calibration" default="false"/>
 
 	<!-- Args for using data from a previous calibration	-->
 	<arg name="use_saved_data" default="false" />
@@ -10,27 +10,32 @@
 
 	<!-- Args for camera name and tag_id of world and calibration -->
 	<arg name="num_cameras" default="2"/>
-	<arg name="tag_world_id" default="55"/> <!-- Check which tags were printed and apriltag_ros/config/tags.yaml-->
+	<arg name="tag_world_id" default="55"/> <!-- Check which tags were printed and /config/apriltag/tags.yaml-->
 	<arg name="tag_calibration" default="56"/>
 
 	<!-- Args for precision of constant estimator -->
-	<arg name="train_length" default="200" />  <!-- Number of consecutive values for sampling -->
-	<arg name="max_error" default="1e-8"/> 	<!-- Max error in the sample values-->
+	<arg name="train_length" default="100" />  <!-- Number of consecutive values for sampling -->
+	<arg name="max_error" default="1e-7"/> 	<!-- Max error in the sample values-->
 
 	<!-- Args for topic names  -->
-	<arg name="image_suffix" default="rect/image_rectified" /><!-- rect/image_rectified or color/image_raw if image is not flipped-->
-    <arg name="camera_info_suffix" default="rect/camera_info_rectified" /> <!-- rect/camera_info_rectified or color/camera_info if image is not flipped-->
+	<arg name="image_suffix" default=nmcli r wifi on"color/image_raw" /><!-- rect/image_rectified or color/image_raw if image is not flipped-->
+    <arg name="camera_info_suffix" default="color/camera_info" /> <!-- rect/camera_info_rectified or color/camera_info if image is not flipped-->
 
 	
 	<!-- Nodes 	-->
+	<node pkg="tf"
+        type="static_transform_publisher"
+        name="linkage"
+        args="0.177 0.1798 0.83 0 0 0  world world1 100" />
+
 	<include file="$(find haptic_control)/launch/camera_test/camera_apriltag.launch">
-		<arg name="camera_name" value="camera_01"/>
+		<arg name="camera_name" value="camera1"/>
 		<arg name="image_suffix" value="$(arg image_suffix)" /> 
 		<arg name="camera_info_suffix" value="$(arg camera_info_suffix)" /> 
 	</include>
 
 	<include file="$(find haptic_control)/launch/camera_test/camera_apriltag.launch">
-		<arg name="camera_name" value="camera_02"/>
+		<arg name="camera_name" value="camera2"/>
 		<arg name="image_suffix" value="$(arg image_suffix)" /> 
 		<arg name="camera_info_suffix" value="$(arg camera_info_suffix)" /> 
 	</include>

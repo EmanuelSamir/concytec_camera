@@ -106,37 +106,37 @@ class ArTagTracker:
 		self.poses = dict(zip(tag_ids, poses))
 
 
-def euler_to_se3(rpy):
+def euler_ypr_to_se3(ypr):
     """Converts Euler angles to an SE3 matrix.
     Args:
-        rpy (list[float]): Euler angles (in radians). Must have three components.
+        ypr (list[float]): Euler angles (in radians). Must have three components.
     Returns:
         numpy.matrixlib.defmatrix.matrix: 4x4 SE3 matrix
     Raises:
-        ValueError: if `len(rpy) != 3`.
+        ValueError: if `len(ypr) != 3`.
     """
-    if len(rpy) != 3:
+    if len(ypr) != 3:
         raise ValueError("Euler angles must have three components")
-
-    T_x = np.matrix([
+    rpy = ypr
+    T_x = np.array([
 					 [1, 0, 0, 0],
                      [0, np.cos(rpy[0]), -np.sin(rpy[0]), 0],
                      [0, np.sin(rpy[0]), np.cos(rpy[0]), 0],
 					 [0, 0, 0, 1]
 					 ])
-    T_y = np.matrix([
+    T_y = np.array([
 					 [np.cos(rpy[1]), 0, np.sin(rpy[1]), 0],
                      [0, 1, 0, 0],
                      [-np.sin(rpy[1]), 0, np.cos(rpy[1]), 0],
 					 [0, 0, 0, 1]
 					 ])
-    T_z = np.matrix([
+    T_z = np.array([
 					 [np.cos(rpy[2]), -np.sin(rpy[2]), 0, 0],
                      [np.sin(rpy[2]), np.cos(rpy[2]), 0, 0],
                      [0, 0, 1, 0],
 					 [0, 0, 0, 1]
 					 ])
-    T_zyx = T_z * T_y * T_x
+    T_zyx = T_z.dot( T_y.dot(  T_x))
     return T_zyx
 
 

@@ -34,7 +34,7 @@ def main():
 	camera_topics = []
 
 	for i in range(1, num_cameras + 1):
-		camera_name = '/camera{}'.format(i)
+		camera_name = '/camera_0{}'.format(i)
 		camera_names.append(camera_name)
 		camera_topics.append(camera_name + '/' + image_suffix)
 
@@ -78,10 +78,13 @@ def main():
 
 	# # Broadcasting tf 
 	# if True:
-	# 	rot_pitch = euler_to_se3([0, -1.5714, 0])
-
-	# 	T_0_1 = T_0_1.dot(rot_pitch)
-	# 	T_0_2 = T_0_2.dot(rot_pitch)
+	#print(T_0_cameras_lst)
+	for i in range(len(T_0_cameras_lst)):
+	#	print(T_0_cameras_lst[i])
+		rot_pitch_roll = euler_ypr_to_se3([-1.5714, -1.5714, 0])
+		T_0_cameras_lst[i] = np.dot(T_0_cameras_lst[i],rot_pitch_roll)
+	#	print(T_0_cameras_lst[i])
+	#print(T_0_cameras_lst)
 
 	# tf_0_1 = mat2pose(T_0_1)
 	# tf_0_2 = mat2pose(T_0_2)
@@ -98,8 +101,8 @@ def main():
 								(tf_0_c[0], tf_0_c[1], tf_0_c[2]),
 								(tf_0_c[3], tf_0_c[4], tf_0_c[5], tf_0_c[6]),
 								rospy.Time.now(),
-								camera_name + "_link_ad",
-								"world1")
+								camera_name + "_link",
+								"world")
 		rate.sleep()
 
 if __name__ == '__main__':
