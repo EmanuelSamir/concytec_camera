@@ -4,7 +4,7 @@ joint_state_controller:
     publish_rate: 50  
 
 # Trajectory controller
-arm_controller:
+scaled_pos_joint_traj_controller:
   type: position_controllers/JointTrajectoryController
   joints:
      - shoulder_pan_joint
@@ -25,6 +25,8 @@ arm_controller:
   stop_trajectory_duration: 0.5
   state_publish_rate:  25
   action_monitor_rate: 10
+
+# Joint group controller
 joint_group_position_controller:
   type: position_controllers/JointGroupPositionController
   joints:
@@ -34,5 +36,3 @@ joint_group_position_controller:
      - wrist_1_joint
      - wrist_2_joint
      - wrist_3_joint
-
-

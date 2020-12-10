@@ -13,29 +13,33 @@ class CameraFlipper():
         self.image_data = []
         self.im_pub = rospy.Publisher(camera_name+"/rect/image_rectified", Image, queue_size=1) 
         self.ci_pub = rospy.Publisher(camera_name+"/rect/camera_info", CameraInfo, queue_size=1)
-	self.cinfo = CameraInfo()
-	self.bridge = CvBridge()
-	im_s = message_filters.Subscriber(camera_name + "/rgb/image_raw" , Image)
-	ci_s = message_filters.Subscriber(camera_name + "/rgb/camera_info", CameraInfo)
-	ts = message_filters.TimeSynchronizer([im_s, ci_s], 10)
-	ts.registerCallback(self.cb)
+        self.cinfo = CameraInfo()
+        self.bridge = CvBridge()
+        im_s = message_filters.Subscriber(camera_name + "/rgb/image_raw" , Image)
+        ci_s = message_filters.Subscriber(camera_name + "/rgb/camera_info", CameraInfo)
+        ts = message_filters.TimeSynchronizer([im_s, ci_s], 10)
+        ts.registerCallback(self.cb)
 
     def cb(self, im, info):
         cv_image = self.bridge.imgmsg_to_cv2(im, desired_encoding='passthrough')
         cv_image_flipped = cv2.flip(cv_image, 0)
         image_message = self.bridge.cv2_to_imgmsg(cv_image_flipped, encoding=im.encoding)
         image_message.header = im.header
-	self.im_pub.publish(image_message)
-	self.ci_pub.publish(info)
+        self.im_pub.publish(image_message)
+        self.ci_pub.publish(info)
         print(image_message.height)
-	#print(info.header.stamp)
-	print("--")
+        #print(info.header.stamp)
+        print("--")
 
 def main():
     # Node definition
     rospy.init_node("flipper", anonymous=False)
-    cf1 =  CameraFlipper("/camera_01")
-    cf2 =  CameraFlipper("/camera_02")
+
+    num_cameras = rospy.get_param('/flipper/num_cameras')
+    cf_lst = []
+
+    for i in range(1, num_cameras+1):
+        cf_lst.append(CameraFlipper("/camera_0{}".format(i)))
     
     rospy.spin()
 

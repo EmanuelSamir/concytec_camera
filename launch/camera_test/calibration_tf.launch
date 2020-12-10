@@ -1,0 +1,66 @@
+<launch>
+	<!-- Configure args 	-->
+	<!-- Args to enable nodes	-->
+	<arg name="flipper" default="false"/>
+  	<arg name="tf_calibration" default="true"/>
+
+	<!-- Args for using data from a previous calibration	-->
+	<arg name="use_saved_data" default="false" />
+	<arg name="tf_config" default="$(find haptic_control)/config/tf"/>
+
+	<!-- Args for camera name and tag_id of world and calibration -->
+	<arg name="num_cameras" default="2"/>
+	<arg name="tag_world_id" default="0"/> <!-- Check which tags were printed and apriltag_ros/config/tags.yaml-->
+	<arg name="tag_calibration" default="1"/>
+
+	<!-- Args for precision of constant estimator -->
+	<arg name="train_length" default="100" />  <!-- Number of consecutive values for sampling -->
+	<arg name="max_error" default="1e-7"/> 	<!-- Max error in the sample values-->
+
+	<!-- Args for topic names  -->
+	<arg name="image_suffix" default="color/image_raw" /><!-- rect/image_rectified or color/image_raw if image is not flipped-->
+    <arg name="camera_info_suffix" default="color/camera_info" /> <!-- rect/camera_info_rectified or color/camera_info if image is not flipped-->
+
+	
+	<!-- Nodes 	-->
+	<node pkg="tf"
+        type="static_transform_publisher"
+        name="linkage"
+        args="0.177 0.1798 0.83 0 0 0  world world1 100" />
+
+	<include file="$(find haptic_control)/launch/camera_test/camera_apriltag.launch">
+		<arg name="camera_name" value="camera1"/>
+		<arg name="image_suffix" value="$(arg image_suffix)" /> 
+		<arg name="camera_info_suffix" value="$(arg camera_info_suffix)" /> 
+	</include>
+
+	<include file="$(find haptic_control)/launch/camera_test/camera_apriltag.launch">
+		<arg name="camera_name" value="camera2"/>
+		<arg name="image_suffix" value="$(arg image_suffix)" /> 
+		<arg name="camera_info_suffix" value="$(arg camera_info_suffix)" /> 
+	</include>
+
+	<!-- Here you can add an additional camera -->
+
+	<!-- Flips camera topics -->
+	<group if="$(arg flipper)">
+		<node name="flipper" pkg="haptic_control" type="flipper">
+			<param name="num_cameras" type="int" value="$(arg num_cameras)" />
+		</node> 
+	</group>
+
+	<group if="$(arg tf_calibration)">
+		<!-- Calibrates camera poses and broadcastes -->
+		<node name="tf_calibration" pkg="haptic_control" type="tf_calibration"  output="screen">
+			<param name="use_saved_data" type="bool" value="$(arg use_saved_data)" />
+			<param name="tf_config" type="string" value="$(arg tf_config)" />
+			<param name="num_cameras" type="int" value="$(arg num_cameras)" />
+			<param name="tag_world_id" type="int" value="$(arg tag_world_id)" />
+			<param name="tag_calibration" type="int" value="$(arg tag_calibration)" />
+			<param name="train_length" type="double" value="$(arg train_length)" />
+			<param name="max_error" type="double" value="$(arg max_error)" />
+			<param name="image_suffix" type="string" value="$(arg image_suffix)" /> 
+		</node> 
+	</group>
+
+</launch>
